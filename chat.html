@@ -2,118 +2,115 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>IMU - Engine Yönetim Paneli</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMU - Randevu Sistemi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary: #2c3e50; --secondary: #3498db; --success: #27ae60; --warning: #f1c40f; --light: #f4f7f6; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--light); margin: 0; display: flex; height: 100vh; }
-        .sidebar { width: 300px; background: var(--primary); color: white; padding: 20px; display: flex; flex-direction: column; }
-        .sidebar h2 { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; font-size: 1.2rem; color: var(--secondary); }
-        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
-        .dashboard { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
-        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        input { width: 100%; padding: 10px; border-radius: 5px; border: none; margin-bottom: 12px; background: #34495e; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; transition: 0.3s; }
-        .btn-search { background: var(--warning); color: #2c3e50; }
-        .btn-sync { background: var(--success); color: white; }
-        .log-container { background: #1e272e; color: #0be881; padding: 12px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; height: 150px; overflow-y: auto; margin-top: auto; }
-        .randevu-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 0.9rem; }
-        .status-box { background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 0.85rem; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding-bottom: 50px; }
+        header { background: #2c3e50; color: white; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 800px; margin: 30px auto; padding: 0 20px; }
+        h2 { color: #2c3e50; text-align: center; }
+        
+        /* Güncelleme Butonu Stili */
+        .btn-update {
+            display: block;
+            margin: 0 auto 20px auto;
+            padding: 12px 25px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-update:hover { background-color: #2980b9; }
+        .btn-update i { margin-right: 8px; }
+
+        .randevu-kart { 
+            background: white; border-left: 5px solid #3498db; margin-bottom: 15px; 
+            padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .zaman { font-weight: bold; color: #2c3e50; background: #ecf0f1; padding: 5px 12px; border-radius: 20px; }
+        .admin-link { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 15px; border-radius: 50%; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        footer { position: fixed; bottom: 0; width: 100%; background: #2c3e50; color: white; text-align: center; padding: 10px 0; font-size: 0.8rem; }
     </style>
 </head>
 <body>
+    <header>
+        <h1><i class="fas fa-university"></i> İstanbul Medeniyet Üniversitesi</h1>
+        <p>Akıllı Salon Rezervasyon Sistemi</p>
+    </header>
 
-<div class="sidebar">
-    <h2><i class="fas fa-cogs"></i> IMU ENGINE v5.0</h2>
-    <div style="margin-top: 20px;">
-        <label style="font-size: 0.8rem; color: #bdc3c7;">ID ile Sorgula (Binary Search)</label>
-        <input type="number" id="searchId" placeholder="ID Giriniz...">
-        <button class="btn-search" onclick="randevuAra()"><i class="fas fa-search"></i> Algoritmayı Çalıştır</button>
-        <button class="btn-sync" onclick="verileriCek()"><i class="fas fa-sync-alt"></i> Backend Senkronize Et</button>
-    </div>
-    <div class="log-container" id="logs">> Engine Ready...</div>
-</div>
+    <div class="container">
+        <h2><i class="fas fa-calendar-check"></i> Günlük Salon Programı</h2>
+        
+        <button class="btn-update" onclick="verileriGetir()">
+            <i class="fas fa-sync-alt"></i> Listeyi Güncelle
+        </button>
 
-<div class="main-content">
-    <div class="dashboard">
-        <div class="card">
-            <h3><i class="fas fa-database"></i> Bellekteki Veriler (Sorted)</h3>
-            <div id="randevuListesi"></div>
-        </div>
-        <div class="card">
-            <h3><i class="fas fa-project-diagram"></i> Sistem Durumu</h3>
-            <div class="status-box">
-                <p><strong>Veri Yapısı:</strong> AVL Balanced Interval Tree</p>
-                <p><strong>Arama Hızı:</strong> O(log n)</p>
-                <p><strong>Sıralama:</strong> Quicksort (ID bazlı)</p>
-            </div>
-            <div style="text-align: center; margin-top: 50px; color: #dfe6e9;">
-                <i class="fas fa-microchip fa-5x"></i>
-                <p style="color: #bdc3c7;">Backend Bağlantısı Aktif</p>
-            </div>
+        <div id="randevuListesi">
+            <p style="text-align:center;">Veriler yükleniyor...</p>
         </div>
     </div>
-</div>
 
-<script>
-    let randevular = [];
+    <a href="chat.html" class="admin-link" title="Yönetim Paneli">
+        <i class="fas fa-tools fa-lg"></i>
+    </a>
 
-    function logYaz(msg, error = false) {
-        const logs = document.getElementById('logs');
-        const color = error ? '#ff3f34' : '#0be881';
-        logs.innerHTML += `<br>> <span style="color:${color}">${msg}</span>`;
-        logs.scrollTop = logs.scrollHeight;
-    }
+    <footer><p>© 2025 IMU Veri Yapıları Projesi - Tüm Hakları Saklıdır</p></footer>
 
-    function formatZaman(dakika) {
-        let h = Math.floor(dakika / 60).toString().padStart(2, '0');
-        let m = (dakika % 60).toString().padStart(2, '0');
-        return `${h}:${m}`;
-    }
-
-    async function verileriCek() {
-        try {
-            const res = await fetch('data.json?t=' + new Date().getTime());
-            randevular = await res.json();
-            arayuzGuncelle();
-            logYaz(`${randevular.length} kayıt senkronize edildi.`);
-        } catch (e) { logYaz("Hata: data.json okunamadı!", true); }
-    }
-
-    function arayuzGuncelle() {
-        const liste = document.getElementById('randevuListesi');
-        liste.innerHTML = '';
-        randevular.sort((a,b) => a.id - b.id); // ID'ye göre sırala
-        randevular.forEach(r => {
-            liste.innerHTML += `<div class="randevu-item"><span>#${r.id} - ${r.isim}</span> <b>${formatZaman(r.baslangic)}</b></div>`;
-        });
-    }
-
-    function randevuAra() {
-        const id = document.getElementById('searchId').value;
-        if(!id) return;
-        logYaz(`Binary Search tetiklendi: ID ${id}`);
-        const s = randevular.find(r => r.id == id); // Binary Search simülasyonu
-        if(s) {
-            logYaz(`Bulundu: ${s.isim}`);
-            alert(`BULUNDU!\nİsim: ${s.isim}\nSaat: ${formatZaman(s.baslangic)} - ${formatZaman(s.bitis)}`);
-        } else {
-            logYaz(`Hata: ID ${id} bulunamadı.`, true);
+    <script>
+        // Dakikayı (C'den gelen int) SS:DD formatına çevirir
+        function formatZaman(dakika) {
+            let s = Math.floor(dakika / 60).toString().padStart(2, '0');
+            let d = (dakika % 60).toString().padStart(2, '0');
+            return `${s}:${d}`;
         }
-    }
 
-    window.onload = verileriCek;
-    async function verileriCek() {
-    try {
-        logYaz("Manuel senkronizasyon başlatıldı...");
-        const res = await fetch('data.json?t=' + new Date().getTime());
-        randevular = await res.json();
-        arayuzGuncelle();
-        logYaz(`${randevular.length} kayıt başarıyla çekildi.`, 'success');
-    } catch (e) { 
-        logYaz("Hata: Backend verisi henüz hazır değil!", true); 
-    }
-}
-</script>
+        async function verileriGetir() {
+            try {
+                console.log("Manuel senkronizasyon tetiklendi...");
+                
+                // Cache (önbellek) sorununu önlemek için timestamp ekliyoruz
+                const response = await fetch('data.json?t=' + new Date().getTime());
+                if (!response.ok) throw new Error("Dosya bulunamadı");
+                
+                const veriler = await response.json();
+                const listeDiv = document.getElementById('randevuListesi');
+                listeDiv.innerHTML = '';
+
+                if (veriler.length === 0) {
+                    listeDiv.innerHTML = "<p style='text-align:center;'>Henüz kayıtlı randevu yok.</p>";
+                    return;
+                }
+
+                // C tarafındaki Quicksort mantığına uygun olarak JavaScript'te de sıralıyoruz
+                veriler.sort((a, b) => a.baslangic - b.baslangic);
+
+                veriler.forEach(r => {
+                    listeDiv.innerHTML += `
+                        <div class="randevu-kart">
+                            <div><strong>#${r.id}</strong> - ${r.isim}</div>
+                            <div class="zaman">
+                                <i class="far fa-clock"></i> ${formatZaman(r.baslangic)} - ${formatZaman(r.bitis)}
+                            </div>
+                        </div>`;
+                });
+                
+                console.log("Veriler başarıyla manuel olarak çekildi.");
+
+            } catch (err) { 
+                console.log("Hata: Backend verisi (data.json) okunamıyor."); 
+                document.getElementById('randevuListesi').innerHTML = 
+                    "<p style='text-align:center; color:red;'>Veri çekilemedi. Lütfen backend'in çalıştığından emin olun.</p>";
+            }
+        }
+
+        // Sayfa ilk açıldığında verileri bir kez otomatik getir
+        window.onload = verileriGetir;
+    </script>
 </body>
 </html>
